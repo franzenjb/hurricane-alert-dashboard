@@ -1,45 +1,13 @@
 {
   "summary": {
-    "timestamp": "2025-09-10T10:10:14.325161+00:00",
+    "timestamp": "2025-09-10T17:22:31.513029+00:00",
     "alert_level": "green",
-    "total_systems": 1,
+    "total_systems": 0,
     "florida_threats": 0,
-    "active_storms": [
-      {
-        "id": "ep112025",
-        "type": "active",
-        "name": "Kiko",
-        "classification": "TS",
-        "intensity": "35",
-        "pressure": "1008",
-        "lat": 0,
-        "lon": 0,
-        "movement": 280,
-        "speed": 13,
-        "threatens_florida": false,
-        "timestamp": "2025-09-10T10:10:14.324289+00:00",
-        "advisory_url": "https://www.nhc.noaa.gov/text/refresh/MIATCPCP4"
-      }
-    ],
+    "active_storms": [],
     "potential_systems": [],
-    "message": "Systems present but not threatening Florida"
+    "message": "No tropical activity"
   },
-  "alerts": [
-    {
-      "id": "ep112025",
-      "type": "active",
-      "name": "Kiko",
-      "classification": "TS",
-      "intensity": "35",
-      "pressure": "1008",
-      "lat": 0,
-      "lon": 0,
-      "movement": 280,
-      "speed": 13,
-      "threatens_florida": false,
-      "timestamp": "2025-09-10T10:10:14.324289+00:00",
-      "advisory_url": "https://www.nhc.noaa.gov/text/refresh/MIATCPCP4"
-    }
-  ],
-  "last_check": "2025-09-10T10:10:14.325843+00:00"
+  "alerts": [],
+  "last_check": "2025-09-10T17:22:31.513348+00:00"
 }

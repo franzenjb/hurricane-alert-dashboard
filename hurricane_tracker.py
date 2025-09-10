@@ -170,12 +170,48 @@ class HurricaneTracker:
             
             if data.get('activeStorms'):
                 for storm in data['activeStorms']:
-                    # SKIP PACIFIC STORMS - ONLY ATLANTIC/GULF
+                    # Get storm identifiers
+                    storm_id = storm.get('id', '').lower()
                     basin = storm.get('basin', '').lower()
-                    if 'pacific' in basin or 'ep' in basin or 'cp' in basin:
-                        logger.info(f"Skipping Pacific storm: {storm.get('name', 'Unknown')}")
+                    bin_number = storm.get('binNumber', '').lower()
+                    storm_name = storm.get('name', 'Unknown')
+                    
+                    # STRICT ATLANTIC-ONLY FILTERING
+                    # Pacific storms have IDs starting with 'ep', 'cp', 'wp'
+                    # Pacific storms have basins like 'CP', 'EP', 'WP', 'Pacific'  
+                    # Pacific storms have binNumbers starting with 'CP', 'EP', 'WP'
+                    
+                    is_pacific = (
+                        storm_id.startswith('ep') or 
+                        storm_id.startswith('cp') or 
+                        storm_id.startswith('wp') or
+                        'pacific' in basin or
+                        'ep' in basin or 
+                        'cp' in basin or 
+                        'wp' in basin or
+                        bin_number.startswith('cp') or
+                        bin_number.startswith('ep') or
+                        bin_number.startswith('wp')
+                    )
+                    
+                    if is_pacific:
+                        logger.info(f"SKIPPING Pacific storm: {storm_name} (ID: {storm.get('id')}, Basin: {storm.get('basin')}, Bin: {storm.get('binNumber')})")
                         continue
                     
+                    # ONLY ALLOW CONFIRMED ATLANTIC STORMS
+                    # Atlantic storms have IDs starting with 'al'
+                    # Atlantic storms have binNumbers starting with 'AL' or 'AT'
+                    is_atlantic = (
+                        storm_id.startswith('al') or
+                        bin_number.startswith('al') or
+                        bin_number.startswith('at')
+                    )
+                    
+                    if not is_atlantic:
+                        logger.info(f"SKIPPING non-Atlantic storm: {storm_name} (ID: {storm.get('id')}, Basin: {storm.get('basin')}, Bin: {storm.get('binNumber')})")
+                        continue
+                    
+                    # Process confirmed Atlantic storm
                     storm_info = {
                         "id": storm.get('id', 'unknown'),
                         "type": "active",
@@ -192,7 +228,7 @@ class HurricaneTracker:
                         "advisory_url": f"https://www.nhc.noaa.gov/text/refresh/MIATCP{storm.get('binNumber', '')}"
                     }
                     storms.append(storm_info)
-                    logger.info(f"Active storm: {storm_info['name']} - {storm_info['classification']}")
+                    logger.info(f"ACCEPTED Atlantic storm: {storm_info['name']} - {storm_info['classification']} (ID: {storm.get('id')})")
             
         except Exception as e:
             logger.error(f"Failed to fetch active storms: {e}")

@@ -201,24 +201,51 @@ function hurricaneApp() {
                 
                 if (stormsData.activeStorms) {
                     stormsData.activeStorms.forEach(storm => {
-                        // SKIP PACIFIC STORMS - ONLY ATLANTIC/GULF
-                        const id = (storm.id || '').toLowerCase();
+                        // Get storm identifiers
+                        const stormId = (storm.id || '').toLowerCase();
+                        const basin = (storm.basin || '').toLowerCase();
                         const binNumber = (storm.binNumber || '').toLowerCase();
+                        const stormName = storm.name || 'Unknown';
                         
-                        // Atlantic storms have IDs starting with 'al' and binNumbers starting with 'AT'
-                        // Pacific storms have 'ep', 'cp', 'wp' in their IDs or binNumbers
-                        if (id.includes('ep') || id.includes('cp') || id.includes('wp') ||
-                            binNumber.includes('ep') || binNumber.includes('cp') || binNumber.includes('wp')) {
-                            console.log('Skipping Pacific storm:', storm.name, '- ID:', storm.id);
+                        // STRICT ATLANTIC-ONLY FILTERING
+                        // Pacific storms have IDs starting with 'ep', 'cp', 'wp'
+                        // Pacific storms have basins like 'CP', 'EP', 'WP', 'Pacific'  
+                        // Pacific storms have binNumbers starting with 'CP', 'EP', 'WP'
+                        
+                        const isPacific = (
+                            stormId.startsWith('ep') || 
+                            stormId.startsWith('cp') || 
+                            stormId.startsWith('wp') ||
+                            basin.includes('pacific') ||
+                            basin.includes('ep') ||
+                            basin.includes('cp') ||
+                            basin.includes('wp') ||
+                            binNumber.startsWith('cp') ||
+                            binNumber.startsWith('ep') ||
+                            binNumber.startsWith('wp')
+                        );
+                        
+                        if (isPacific) {
+                            console.log(`SKIPPING Pacific storm: ${stormName} (ID: ${storm.id}, Basin: ${storm.basin}, Bin: ${storm.binNumber})`);
                             return;
                         }
                         
-                        // Only process Atlantic storms (id starts with 'al' or binNumber starts with 'AT')
-                        if (!id.startsWith('al') && !binNumber.startsWith('at')) {
-                            console.log('Skipping non-Atlantic storm:', storm.name);
+                        // ONLY ALLOW CONFIRMED ATLANTIC STORMS
+                        // Atlantic storms have IDs starting with 'al'
+                        // Atlantic storms have binNumbers starting with 'AL' or 'AT'
+                        const isAtlantic = (
+                            stormId.startsWith('al') ||
+                            binNumber.startsWith('al') ||
+                            binNumber.startsWith('at')
+                        );
+                        
+                        if (!isAtlantic) {
+                            console.log(`SKIPPING non-Atlantic storm: ${stormName} (ID: ${storm.id}, Basin: ${storm.basin}, Bin: ${storm.binNumber})`);
                             return;
                         }
                         
+                        // Process confirmed Atlantic storm
+                        console.log(`ACCEPTED Atlantic storm: ${stormName} (ID: ${storm.id})`);
                         systems.unshift({
                             id: storm.id,
                             type: 'active',

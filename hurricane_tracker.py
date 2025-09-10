@@ -161,7 +161,7 @@ class HurricaneTracker:
         return None
     
     def fetch_active_storms(self) -> List[Dict]:
-        """Fetch currently active storms from NHC"""
+        """Fetch currently active ATLANTIC/GULF storms from NHC"""
         storms = []
         try:
             response = requests.get(self.current_storms, timeout=20)
@@ -170,6 +170,12 @@ class HurricaneTracker:
             
             if data.get('activeStorms'):
                 for storm in data['activeStorms']:
+                    # SKIP PACIFIC STORMS - ONLY ATLANTIC/GULF
+                    basin = storm.get('basin', '').lower()
+                    if 'pacific' in basin or 'ep' in basin or 'cp' in basin:
+                        logger.info(f"Skipping Pacific storm: {storm.get('name', 'Unknown')}")
+                        continue
+                    
                     storm_info = {
                         "id": storm.get('id', 'unknown'),
                         "type": "active",

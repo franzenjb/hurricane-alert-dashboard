@@ -201,6 +201,13 @@ function hurricaneApp() {
                 
                 if (stormsData.activeStorms) {
                     stormsData.activeStorms.forEach(storm => {
+                        // SKIP PACIFIC STORMS - ONLY ATLANTIC/GULF
+                        const basin = (storm.basin || '').toLowerCase();
+                        if (basin.includes('pacific') || basin === 'ep' || basin === 'cp') {
+                            console.log('Skipping Pacific storm:', storm.name);
+                            return;
+                        }
+                        
                         systems.unshift({
                             id: storm.id,
                             type: 'active',

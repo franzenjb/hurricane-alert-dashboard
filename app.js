@@ -202,9 +202,20 @@ function hurricaneApp() {
                 if (stormsData.activeStorms) {
                     stormsData.activeStorms.forEach(storm => {
                         // SKIP PACIFIC STORMS - ONLY ATLANTIC/GULF
-                        const basin = (storm.basin || '').toLowerCase();
-                        if (basin.includes('pacific') || basin === 'ep' || basin === 'cp') {
-                            console.log('Skipping Pacific storm:', storm.name);
+                        const id = (storm.id || '').toLowerCase();
+                        const binNumber = (storm.binNumber || '').toLowerCase();
+                        
+                        // Atlantic storms have IDs starting with 'al' and binNumbers starting with 'AT'
+                        // Pacific storms have 'ep', 'cp', 'wp' in their IDs or binNumbers
+                        if (id.includes('ep') || id.includes('cp') || id.includes('wp') ||
+                            binNumber.includes('ep') || binNumber.includes('cp') || binNumber.includes('wp')) {
+                            console.log('Skipping Pacific storm:', storm.name, '- ID:', storm.id);
+                            return;
+                        }
+                        
+                        // Only process Atlantic storms (id starts with 'al' or binNumber starts with 'AT')
+                        if (!id.startsWith('al') && !binNumber.startsWith('at')) {
+                            console.log('Skipping non-Atlantic storm:', storm.name);
                             return;
                         }
                         

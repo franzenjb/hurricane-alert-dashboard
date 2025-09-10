@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hurricane Alert Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div x-data="hurricaneApp()" x-init="init()" class="container mx-auto p-4">
+        <header class="bg-blue-600 text-white p-6 rounded-lg mb-6">
+            <h1 class="text-3xl font-bold">🌀 Hurricane Alert Dashboard</h1>
+            <p class="mt-2">Real-time NHC Tropical Weather Outlook</p>
+        </header>
+
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-semibold">Current Atlantic Activity</h2>
+                <button @click="fetchData()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    🔄 Refresh
+                </button>
+            </div>
+            
+            <div x-show="loading" class="text-center py-8">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                <p class="mt-2">Loading latest data...</p>
+            </div>
+
+            <div x-show="!loading && alerts.length === 0" class="text-center py-8 text-gray-500">
+                <p>No active tropical systems at this time</p>
+            </div>
+
+            <div x-show="!loading && alerts.length > 0" class="space-y-4">
+                <template x-for="alert in alerts" :key="alert.id">
+                    <div class="border rounded-lg p-4" :class="{
+                        'border-red-500 bg-red-50': alert.maxProb >= 70,
+                        'border-orange-500 bg-orange-50': alert.maxProb >= 40 && alert.maxProb < 70,
+                        'border-yellow-500 bg-yellow-50': alert.maxProb >= 20 && alert.maxProb < 40,
+                        'border-gray-300': alert.maxProb < 20
+                    }">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-lg font-semibold" x-text="alert.region"></h3>
+                            <span class="text-sm text-gray-600" x-text="formatDate(alert.timestamp)"></span>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-4 mb-3">
+                            <div class="text-center">
+                                <p class="text-sm text-gray-600">48-Hour</p>
+                                <p class="text-2xl font-bold" :class="{
+                                    'text-red-600': alert.p48 >= 70,
+                                    'text-orange-600': alert.p48 >= 40 && alert.p48 < 70,
+                                    'text-yellow-600': alert.p48 >= 20 && alert.p48 < 40,
+                                    'text-gray-600': alert.p48 < 20
+                                }" x-text="alert.p48 + '%'"></p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-sm text-gray-600">7-Day</p>
+                                <p class="text-2xl font-bold" :class="{
+                                    'text-red-600': alert.p7 >= 70,
+                                    'text-orange-600': alert.p7 >= 40 && alert.p7 < 70,
+                                    'text-yellow-600': alert.p7 >= 20 && alert.p7 < 40,
+                                    'text-gray-600': alert.p7 < 20
+                                }" x-text="alert.p7 + '%'"></p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-sm text-gray-600">Max Risk</p>
+                                <p class="text-2xl font-bold" :class="{
+                                    'text-red-600': alert.maxProb >= 70,
+                                    'text-orange-600': alert.maxProb >= 40 && alert.maxProb < 70,
+                                    'text-yellow-600': alert.maxProb >= 20 && alert.maxProb < 40,
+                                    'text-gray-600': alert.maxProb < 20
+                                }" x-text="alert.maxProb + '%'"></p>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white p-3 rounded border border-gray-200">
+                            <p class="text-sm whitespace-pre-wrap" x-text="alert.text"></p>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <footer class="text-center text-gray-600 text-sm">
+            <p>Data source: National Hurricane Center (NHC)</p>
+            <p>Last updated: <span x-text="lastUpdate"></span></p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

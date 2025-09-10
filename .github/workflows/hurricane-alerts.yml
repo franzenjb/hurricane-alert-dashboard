@@ -1,0 +1,116 @@
+name: Hurricane Text Alerts
+
+on:
+  schedule:
+    # Check every 30 minutes during hurricane season (June-November)
+    - cron: '*/30 6-11 * * *'  # Every 30 min, June through November
+    - cron: '0 */2 1-5,12 * * *'  # Every 2 hours, other months
+  workflow_dispatch:  # Manual trigger button in GitHub
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: pip install requests
+    
+    - name: Check for Hurricanes
+      id: hurricane_check
+      run: |
+        python3 << 'EOF'
+        import requests
+        import json
+        import os
+        
+        # Run the tracker
+        exec(open('hurricane_tracker.py').read())
+        tracker = HurricaneTracker()
+        summary = tracker.run_check()
+        
+        # Check if we should send notification
+        should_alert = False
+        alert_priority = "low"
+        
+        if summary['alert_level'] == 'red':
+            should_alert = True
+            alert_priority = "critical"
+        elif summary['alert_level'] == 'orange':
+            should_alert = True
+            alert_priority = "high"
+        elif summary['alert_level'] == 'yellow' and summary['florida_threats'] > 0:
+            should_alert = True
+            alert_priority = "medium"
+        
+        # Check if this is a new or changed alert
+        try:
+            with open('last_alert.json', 'r') as f:
+                last = json.load(f)
+                if last['alert_level'] == summary['alert_level'] and last['total_systems'] == summary['total_systems']:
+                    should_alert = False  # Same as before, don't spam
+        except:
+            pass  # First run
+        
+        # Save current state
+        with open('last_alert.json', 'w') as f:
+            json.dump(summary, f)
+        
+        # Set GitHub Action outputs
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            f.write(f"should_alert={str(should_alert).lower()}\n")
+            f.write(f"alert_level={summary['alert_level']}\n")
+            f.write(f"message={summary['message']}\n")
+            f.write(f"fl_threats={summary['florida_threats']}\n")
+            f.write(f"priority={alert_priority}\n")
+        EOF
+    
+    # Option 1: Send SMS via IFTTT (Free & Easy)
+    - name: Send Text Alert via IFTTT
+      if: steps.hurricane_check.outputs.should_alert == 'true'
+      run: |
+        curl -X POST https://maker.ifttt.com/trigger/hurricane_alert/with/key/${{ secrets.IFTTT_KEY }} \
+          -H "Content-Type: application/json" \
+          -d '{
+            "value1": "${{ steps.hurricane_check.outputs.alert_level }}",
+            "value2": "${{ steps.hurricane_check.outputs.message }}",
+            "value3": "https://franzenjb.github.io/hurricane-alert-dashboard/"
+          }'
+    
+    # Option 2: Send to Slack (if you use Slack)
+    - name: Send Slack Alert
+      if: steps.hurricane_check.outputs.should_alert == 'true'
+      uses: 8398a7/action-slack@v3
+      with:
+        status: custom
+        custom_payload: |
+          {
+            text: "🌀 Hurricane Alert - ${{ steps.hurricane_check.outputs.alert_level }} Level",
+            attachments: [{
+              color: "${{ steps.hurricane_check.outputs.alert_level == 'red' && 'danger' || steps.hurricane_check.outputs.alert_level == 'orange' && 'warning' || '#FFA500' }}",
+              fields: [
+                { title: "Alert Level", value: "${{ steps.hurricane_check.outputs.alert_level }}", short: true },
+                { title: "FL Threats", value: "${{ steps.hurricane_check.outputs.fl_threats }}", short: true },
+                { title: "Message", value: "${{ steps.hurricane_check.outputs.message }}", short: false },
+                { title: "Dashboard", value: "https://franzenjb.github.io/hurricane-alert-dashboard/", short: false }
+              ]
+            }]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+      if: env.SLACK_WEBHOOK_URL != ''
+    
+    # Save the updated data
+    - name: Commit updates
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git add hurricane_data.json last_alert.json 2>/dev/null || true
+        git commit -m "Auto-update: ${{ steps.hurricane_check.outputs.alert_level }} alert" || true
+        git push || true

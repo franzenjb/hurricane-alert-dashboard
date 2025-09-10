@@ -6,8 +6,6 @@ Monitors NHC TWO, GIS polygons, and CurrentStorms for Florida AOI
 
 import requests
 import re
-import io
-import zipfile
 import json
 from datetime import datetime, timezone, timedelta
 import time

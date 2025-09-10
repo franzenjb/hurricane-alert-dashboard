@@ -1,0 +1,85 @@
+name: Hurricane Monitor
+
+on:
+  schedule:
+    # Runs every 2 hours (NHC updates at 2/8 AM/PM EDT)
+    - cron: '10 */2 * * *'  # 10 minutes past every 2 hours
+  workflow_dispatch:  # Allow manual trigger from GitHub website
+  push:
+    branches: [main]  # Also run when you push changes
+
+jobs:
+  check-hurricanes:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests
+    
+    - name: Run Hurricane Tracker
+      run: |
+        python hurricane_tracker.py
+    
+    - name: Check for alerts
+      id: check_alerts
+      run: |
+        python -c "
+        import json
+        with open('hurricane_data.json', 'r') as f:
+            data = json.load(f)
+        summary = data['summary']
+        print(f\"ALERT_LEVEL={summary['alert_level']}\")
+        print(f\"ALERT_MESSAGE={summary['message']}\")
+        print(f\"FL_THREATS={summary['florida_threats']}\")
+        
+        # Set outputs for GitHub Actions
+        import os
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            f.write(f\"alert_level={summary['alert_level']}\n\")
+            f.write(f\"alert_message={summary['message']}\n\")
+            f.write(f\"fl_threats={summary['florida_threats']}\n\")
+            f.write(f\"should_notify={'true' if summary['alert_level'] in ['yellow', 'orange', 'red'] else 'false'}\n\")
+        "
+    
+    - name: Commit data updates
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add hurricane_data.json
+        git diff --staged --quiet || git commit -m "Update hurricane data - ${{ steps.check_alerts.outputs.alert_level }} alert"
+        git push || true
+    
+    # Send notification if there's an alert
+    - name: Send Alert Notification
+      if: steps.check_alerts.outputs.should_notify == 'true'
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 465
+        secure: true
+        username: ${{ secrets.EMAIL_USERNAME }}
+        password: ${{ secrets.EMAIL_PASSWORD }}
+        subject: "🌀 Hurricane Alert - ${{ steps.check_alerts.outputs.alert_level }} Level"
+        to: ${{ secrets.ALERT_EMAIL }}
+        from: Hurricane Alert System
+        body: |
+          HURRICANE ALERT SYSTEM
+          
+          Alert Level: ${{ steps.check_alerts.outputs.alert_level }}
+          Message: ${{ steps.check_alerts.outputs.alert_message }}
+          Florida Threats: ${{ steps.check_alerts.outputs.fl_threats }}
+          
+          View Dashboard: https://franzenjb.github.io/hurricane-alert-dashboard/
+          
+          This is an automated alert from your Hurricane Tracking System.
